@@ -3,29 +3,24 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 
-dotenv.config();
-
+// Engine'ler
 const { getFootballStatsForDay } = require("./engines/apiFootball");
 const { getBasketballStatsForDay } = require("./engines/basketballEngine");
 const { getTennisStatsForDay } = require("./engines/tennisEngine");
 
+dotenv.config();
+
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 10000; // Render kendi PORT'unu set ediyor
 
 app.use(cors());
 
-// Loglamak için basit middleware
-app.use((req, res, next) => {
-  console.log("👉 Gelen istek:", req.method, req.path, req.query);
-  next();
-});
-
 // ANA İSTATİSTİK ENDPOINTİ
 app.get("/api/stats", async (req, res) => {
-  const sport = (req.query.sport || "futbol").toLowerCase();
-  const dayOffset = parseInt(req.query.day || "0", 10);
+  const sport = (req.query.sport || "futbol").toLowerCase(); // futbol / basketbol / tenis
+  const dayOffset = parseInt(req.query.day || "0", 10);      // 0 = bugün, 1 = yarın, 2 = öbür gün
 
-  console.log("⚽️ Yeni istek:", { sport, dayOffset });
+  console.log("Yeni istek:", { sport, dayOffset });
 
   try {
     let payload;
@@ -42,7 +37,7 @@ app.get("/api/stats", async (req, res) => {
 
     return res.json(payload);
   } catch (err) {
-    console.error("🚨 DETAYLI İSTATİSTİK HATASI:", {
+    console.error("DETAYLI İSTATİSTİK HATASI:", {
       sport,
       dayOffset,
       message: err?.message,
@@ -60,11 +55,11 @@ app.get("/", (req, res) => {
   res.send("sports-stats-api servis çalışıyor ✅");
 });
 
-// 404 - BİZDEN DÖNEN
+// Default 404 (opsiyonel)
 app.use((req, res) => {
-  res.status(404).json({ error: "Route bulunamadı", path: req.path });
+  res.status(404).send("Not Found");
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ sports-stats-api ${PORT} portunda çalışıyor`);
+  console.log(`sports-stats-api ${PORT} portunda çalışıyor`);
 });
