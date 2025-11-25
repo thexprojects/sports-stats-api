@@ -5,6 +5,72 @@
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
+// index.js / server.js en üstlerde bir yere EKLE
+
+// Lig isimleriyle filtre (lig adı içinde geçmesi yeterli)
+const ALLOWED_LEAGUE_KEYWORDS = [
+  'uefa champions league',
+  'uefa europa league',
+  'uefa conference league',
+  'premier league',
+  'la liga',
+  'serie a',
+  'bundesliga',
+  'ligue 1',
+  'super lig',              // Turkish Super League
+  'super league',           // İsviçre vb. ile karışmasın diye kupada ülke filtresi var
+  'eredivisie',
+  'pro league',             // Belgium Pro League
+  '1. lig',                 // Turkish 1. Lig
+  'bundesliga 2',
+  '2. bundesliga',
+  'serie b',
+  'ligue 2',
+  'la liga 2',
+  'segunda division',       // La Liga 2 alternatif
+  'eerste divisie',
+  'switzerland super league',
+  'sweden allsvenskan',
+  'championship'            // England Championship
+];
+
+// Ulusal kupa için ülke listesi
+const CUP_COUNTRIES = [
+  'england',
+  'germany',
+  'france',
+  'italy',
+  'spain',
+  'turkey'
+];
+
+// Kupa adlarında geçebilecek anahtar kelimeler
+const CUP_KEYWORDS = [
+  'cup',          // fa cup, turkish cup
+  'pokal',        // dfb pokal
+  'coppa',        // coppa italia
+  'copa del rey', // ispanya
+  'kupa'          // türkiye kupası
+];
+
+// apifootball event objesini alır, bu maçı kullanıp kullanmayacağımıza karar verir
+function isAllowedFootballMatch(event) {
+  const leagueName = (event.league_name || '').toLowerCase();
+  const countryName = (event.country_name || '').toLowerCase();
+
+  // 1) Direkt lig filtreleri
+  const inFixedLeague = ALLOWED_LEAGUE_KEYWORDS.some(key =>
+    leagueName.includes(key)
+  );
+
+  // 2) Ulusal kupa (sadece seçili ülkeler)
+  const isCup =
+    CUP_COUNTRIES.some(c => countryName.includes(c)) &&
+    CUP_KEYWORDS.some(k => leagueName.includes(k));
+
+  return inFixedLeague || isCup;
+}
+
 require("dotenv").config();
 
 // App
