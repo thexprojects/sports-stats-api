@@ -1,8 +1,13 @@
-// server.js — Günlük Maç İstatistikleri API (FINAL)
-// /api/stats?sport=futbol&day=0
+// index.js — Günlük Maç İstatistikleri API (bahisveri)
+// Örnek: /api/stats?sport=futbol&day=0
 
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+
+const { getFootballStatsForDay } = require("./engines/apiFootball");
+const { getBasketballStatsForDay } = require("./engines/basketballEngine");
+const { getTennisStatsForDay } = require("./engines/tennisEngine");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,169 +15,18 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// ------------------ Dummy veri (5–8 arası) ------------------ //
-
-const todayFutbol = [
-  {
-    home: "Galatasaray",
-    away: "Fenerbahçe",
-    league: "Süper Lig",
-    time: "20:00",
-    market: "Maç Sonucu",
-    line: "1X2",
-    odds: "2.10 / 3.40 / 3.00"
-  },
-  {
-    home: "Beşiktaş",
-    away: "Trabzonspor",
-    league: "Süper Lig",
-    time: "17:00",
-    market: "Toplam Gol",
-    line: "2.5 Üst",
-    odds: "1.80"
-  },
-  {
-    home: "Manchester City",
-    away: "Liverpool",
-    league: "Premier League",
-    time: "15:30",
-    market: "Maç Sonucu",
-    line: "1X2",
-    odds: "1.95 / 3.80 / 3.40"
-  },
-  {
-    home: "Real Madrid",
-    away: "Barcelona",
-    league: "La Liga",
-    time: "22:00",
-    market: "Karşılıklı Gol",
-    line: "Evet",
-    odds: "1.65"
-  },
-  {
-    home: "Inter",
-    away: "Milan",
-    league: "Serie A",
-    time: "19:00",
-    market: "Toplam Gol",
-    line: "2.5 Alt",
-    odds: "1.90"
-  },
-  {
-    home: "PSG",
-    away: "Lyon",
-    league: "Ligue 1",
-    time: "21:45",
-    market: "Ev Sahibi Gol",
-    line: "1.5 Üst",
-    odds: "1.60"
-  }
-];
-
-const todayBasketbol = [
-  {
-    home: "Anadolu Efes",
-    away: "Fenerbahçe Beko",
-    league: "BSL",
-    time: "20:30",
-    market: "Maç Sonu Toplam Sayı",
-    line: "165.5 Üst",
-    odds: "1.85"
-  },
-  {
-    home: "CSKA Moskova",
-    away: "Real Madrid",
-    league: "EuroLeague",
-    time: "21:00",
-    market: "Ev Sahibi Toplam Sayı",
-    line: "82.5 Üst",
-    odds: "1.80"
-  },
-  {
-    home: "Boston Celtics",
-    away: "Miami Heat",
-    league: "NBA",
-    time: "03:00",
-    market: "Maç Sonu Toplam Sayı",
-    line: "219.5 Üst",
-    odds: "1.90"
-  },
-  {
-    home: "Los Angeles Lakers",
-    away: "Golden State Warriors",
-    league: "NBA",
-    time: "05:30",
-    market: "Deplasman Toplam Sayı",
-    line: "112.5 Üst",
-    odds: "1.88"
-  },
-  {
-    home: "Barcelona",
-    away: "Olympiacos",
-    league: "EuroLeague",
-    time: "19:45",
-    market: "Maç Sonu Toplam Sayı",
-    line: "157.5 Alt",
-    odds: "1.92"
-  }
-];
-
-const todayTenis = [
-  {
-    home: "N. Djokovic",
-    away: "C. Alcaraz",
-    league: "ATP",
-    time: "14:00",
-    market: "Maç Sonucu",
-    line: "Djokovic",
-    odds: "1.75"
-  },
-  {
-    home: "I. Swiatek",
-    away: "A. Sabalenka",
-    league: "WTA",
-    time: "16:30",
-    market: "Toplam Oyun",
-    line: "21.5 Üst",
-    odds: "1.85"
-  },
-  {
-    home: "R. Nadal",
-    away: "D. Medvedev",
-    league: "ATP",
-    time: "18:00",
-    market: "Set Bahsi",
-    line: "2-1",
-    odds: "3.20"
-  },
-  {
-    home: "S. Tsitsipas",
-    away: "A. Zverev",
-    league: "ATP",
-    time: "20:00",
-    market: "Toplam Set",
-    line: "3 Set",
-    odds: "2.10"
-  },
-  {
-    home: "O. Jabeur",
-    away: "C. Gauff",
-    league: "WTA",
-    time: "12:00",
-    market: "Maç Sonucu",
-    line: "Gauff",
-    odds: "1.90"
-  }
-];
-
-// ------------------ Helperlar ------------------ //
+/* -----------------------------------
+   Helperlar
+----------------------------------- */
 
 function normalizeSport(s) {
   if (!s) return null;
   s = String(s).toLowerCase();
-  if (s === "futbol" || s === "football" || s === "soccer") return "futbol";
-  if (s === "basketbol" || s === "basket" || s === "basketball") return "basketbol";
-  if (s === "tenis" || s === "tennis") return "tenis";
+
+  if (["futbol", "football", "soccer"].includes(s)) return "futbol";
+  if (["basketbol", "basket", "basketball"].includes(s)) return "basketbol";
+  if (["tenis", "tennis"].includes(s)) return "tenis";
+
   return null;
 }
 
@@ -184,45 +38,171 @@ function normalizeDayOffset(v) {
   return n;
 }
 
-// ------------------ API ------------------ //
+// Basit ülke → bayrak eşlemesi (yoksa 🌍)
+function flagFromCountry(countryName = "") {
+  const c = countryName.toLowerCase();
+  if (c.includes("turkey") || c.includes("türkiye")) return "🇹🇷";
+  if (c.includes("england") || c.includes("english")) return "🏴";
+  if (c.includes("spain")) return "🇪🇸";
+  if (c.includes("italy")) return "🇮🇹";
+  if (c.includes("germany")) return "🇩🇪";
+  if (c.includes("france")) return "🇫🇷";
+  if (c.includes("portugal")) return "🇵🇹";
+  if (c.includes("belgium")) return "🇧🇪";
+  if (c.includes("greece")) return "🇬🇷";
+  return "🌍";
+}
 
-// Sağlık kontrolü
+/**
+ * FUTBOL: Api-Football fixtures → kategori bazlı stats objesi
+ * Şimdilik istatistikler “akıllı ama genel cümle” şeklinde.
+ * Sonraki iterasyonda “son 8 maçında 7 galibiyet” tarzı
+ * hesapları buraya ekleyeceğiz.
+ */
+function buildFootballStatsFromFixtures(fixturesRaw = []) {
+  const stats = {
+    "🆚 Maç Sonucu": [],
+    "⚽️ Toplam Gol": [],
+    "🥅 Karşılıklı Gol": [],
+    "🚩 Korner": [],
+    "🟨 Toplam Kart": [],
+  };
+
+  // Aynı maçı 5 kategoride de kullanmak yerine,
+  // ilk etapta Maç Sonucu + Toplam Gol odaklı dolduralım.
+  // Her kategori için max 8 öneri gibi düşünebilirsin.
+  const maxPerCategory = 8;
+
+  for (const fx of fixturesRaw) {
+    const leagueName = fx.league?.name || "";
+    const countryName = fx.league?.country || "";
+    const home = fx.teams?.home?.name || "Ev Sahibi";
+    const away = fx.teams?.away?.name || "Deplasman";
+    const flag = flagFromCountry(countryName);
+
+    // Maç Sonucu
+    if (stats["🆚 Maç Sonucu"].length < maxPerCategory) {
+      stats["🆚 Maç Sonucu"].push({
+        flag,
+        teams: `${home} vs ${away}`,
+        detail: `${home} ile ${away} arasında ${leagueName} maçında ev sahibi sahaya avantajlı çıkar.`,
+        highlight: `${home} Kazanır`,
+      });
+    }
+
+    // Toplam Gol
+    if (stats["⚽️ Toplam Gol"].length < maxPerCategory) {
+      stats["⚽️ Toplam Gol"].push({
+        flag,
+        teams: `${home} vs ${away}`,
+        detail: `${home} ve ${away} maçlarında genellikle yüksek skor görülüyor.`,
+        highlight: "2.5 Üst",
+      });
+    }
+
+    // Karşılıklı Gol
+    if (stats["🥅 Karşılıklı Gol"].length < maxPerCategory) {
+      stats["🥅 Karşılıklı Gol"].push({
+        flag,
+        teams: `${home} vs ${away}`,
+        detail: `İki takımın da skor katkısı beklenen bir karşılaşma.`,
+        highlight: "KG Var",
+      });
+    }
+
+    // Korner
+    if (stats["🚩 Korner"].length < maxPerCategory) {
+      stats["🚩 Korner"].push({
+        flag,
+        teams: `${home} vs ${away}`,
+        detail: `Maç boyunca kanat oyunları ve ceza sahası içi aksiyon bekleniyor.`,
+        highlight: "9.5 Korner Üst",
+      });
+    }
+
+    // Kart
+    if (stats["🟨 Toplam Kart"].length < maxPerCategory) {
+      stats["🟨 Toplam Kart"].push({
+        flag,
+        teams: `${home} vs ${away}`,
+        detail: `${leagueName} seviyesinde sert ikili mücadelelerin öne çıkacağı bir maç.`,
+        highlight: "4.5 Kart Üst",
+      });
+    }
+  }
+
+  return stats;
+}
+
+/* -----------------------------------
+   HEALTH CHECK
+----------------------------------- */
+
 app.get("/", (req, res) => {
   res.json({ ok: true, message: "sports-stats-api çalışıyor" });
 });
 
-// Asıl endpoint
-app.get("/api/stats", (req, res) => {
+/* -----------------------------------
+   ANA ENDPOINT: /api/stats
+----------------------------------- */
+
+app.get("/api/stats", async (req, res) => {
   const sport = normalizeSport(req.query.sport);
   const dayOffset = normalizeDayOffset(req.query.day || 0);
 
   if (!sport) {
-    return res.status(400).json({ error: "Geçersiz veya eksik 'sport' parametresi" });
+    return res
+      .status(400)
+      .json({ error: "Geçersiz veya eksik 'sport' parametresi" });
   }
 
-  // Şimdilik sadece bugün için veri veriyoruz, farklı günler için boş liste
-  if (dayOffset !== 0) {
-    return res.json([]);
+  try {
+    if (sport === "futbol") {
+      const footballData = await getFootballStatsForDay(dayOffset);
+      const fixtures = footballData.fixtures || [];
+      const stats = buildFootballStatsFromFixtures(fixtures);
+
+      return res.json({
+        date: footballData.date,
+        sport: "futbol",
+        stats, // kategori bazlı obje
+      });
+    }
+
+    if (sport === "basketbol") {
+      const data = await getBasketballStatsForDay(dayOffset);
+      // basketballEngine zaten { date, sport, stats } formatında
+      return res.json({
+        date: data.date,
+        sport: data.sport,
+        stats: data.stats,
+      });
+    }
+
+    if (sport === "tenis") {
+      const data = await getTennisStatsForDay(dayOffset);
+      // tennisEngine de { date, sport, stats } formatında
+      return res.json({
+        date: data.date,
+        sport: data.sport,
+        stats: data.stats,
+      });
+    }
+
+    // Buraya normalde düşmez ama yine de:
+    return res.status(400).json({ error: "Desteklenmeyen spor türü" });
+  } catch (err) {
+    console.error("❌ /api/stats hata:", err.message || err);
+    return res
+      .status(500)
+      .json({ error: "İstatistikler alınırken bir hata oluştu" });
   }
-
-  let list = [];
-  if (sport === "futbol") list = todayFutbol;
-  if (sport === "basketbol") list = todayBasketbol;
-  if (sport === "tenis") list = todayTenis;
-
-  // EXTRA güvenlik: 8 adetten fazlaysa kıs
-  if (list.length > 8) {
-    list = list.slice(0, 8);
-  }
-
-  console.log(
-    `[INFO] /api/stats -> sport=${sport}, dayOffset=${dayOffset}, count=${list.length}`
-  );
-
-  return res.json(list);
 });
 
-// ------------------ Sunucu ------------------ //
+/* -----------------------------------
+   SUNUCU
+----------------------------------- */
+
 app.listen(PORT, () => {
   console.log(`sports-stats-api ${PORT} portunda çalışıyor (PORT=${PORT})`);
 });
