@@ -227,7 +227,6 @@ function buildHighlightFromStats(homeStats, awayStats) {
 // ================================
 //  FUTBOL İÇİN GÜNLÜK MAÇ + ANALİZ
 // ================================
-
 async function fetchFootballStats(dayOffset) {
   const date = getDateWithOffset(dayOffset);
 
@@ -236,17 +235,26 @@ async function fetchFootballStats(dayOffset) {
   const { data } = await axios.get(url);
 
   if (!Array.isArray(data)) {
+    console.error("apifootball beklenmeyen yanıt:", data);
     return [];
   }
+
+  console.log("Toplam maç sayısı:", data.length);
 
   // 1) Sadece istenen ligler
   const filteredFixtures = data.filter((fix) =>
     isAllowedLeague(fix.league_name, fix.country_name)
   );
 
+  console.log("Lig filtresi sonrası maç sayısı:", filteredFixtures.length);
+
+  // Eğer filtre sonrası hiç maç kalmadıysa, eski davranışa dön:
+  const fixturesToUse =
+    filteredFixtures.length > 0 ? filteredFixtures : data;
+
   // 2) Her maç için son maçları analiz ederek öne çıkan bahis türünü oluştur
   const result = await Promise.all(
-    filteredFixtures.map(async (fix) => {
+    fixturesToUse.map(async (fix) => {
       const homeTeam = fix.match_hometeam_name;
       const awayTeam = fix.match_awayteam_name;
       const homeId = fix.match_hometeam_id;
@@ -288,6 +296,7 @@ async function fetchFootballStats(dayOffset) {
 
   return result;
 }
+
 
 // ================================
 //  BASKETBOL & TENİS (BASİT ÖRNEK)
