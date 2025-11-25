@@ -40,6 +40,8 @@ async function getFootballStatsForDay(dayOffset = 0) {
 
     const body = response.data || {};
     const fixtures = body.response || [];
+    console.log("🔥 İlk fixture örneği:");
+console.log(JSON.stringify(fixtures[0], null, 2));
     console.log("✅ Futbol API cevabı:", {
       count: fixtures.length,
       status: response.status,
