@@ -55,9 +55,8 @@ function flagFromCountry(countryName = "") {
 
 /**
  * FUTBOL: Api-Football fixtures → kategori bazlı stats objesi
- * Şimdilik istatistikler “akıllı ama genel cümle” şeklinde.
- * Sonraki iterasyonda “son 8 maçında 7 galibiyet” tarzı
- * hesapları buraya ekleyeceğiz.
+ * Şimdilik “akıllı ama genel” cümleler; ileride gerçek istatistik
+ * analizini bu fonksiyona koyarız.
  */
 function buildFootballStatsFromFixtures(fixturesRaw = []) {
   const stats = {
@@ -68,9 +67,6 @@ function buildFootballStatsFromFixtures(fixturesRaw = []) {
     "🟨 Toplam Kart": [],
   };
 
-  // Aynı maçı 5 kategoride de kullanmak yerine,
-  // ilk etapta Maç Sonucu + Toplam Gol odaklı dolduralım.
-  // Her kategori için max 8 öneri gibi düşünebilirsin.
   const maxPerCategory = 8;
 
   for (const fx of fixturesRaw) {
@@ -85,7 +81,7 @@ function buildFootballStatsFromFixtures(fixturesRaw = []) {
       stats["🆚 Maç Sonucu"].push({
         flag,
         teams: `${home} vs ${away}`,
-        detail: `${home} ile ${away} arasında ${leagueName} maçında ev sahibi sahaya avantajlı çıkar.`,
+        detail: `${home} ile ${away} arasındaki ${leagueName} mücadelesinde ev sahibi sahaya avantajlı çıkıyor.`,
         highlight: `${home} Kazanır`,
       });
     }
@@ -115,7 +111,7 @@ function buildFootballStatsFromFixtures(fixturesRaw = []) {
       stats["🚩 Korner"].push({
         flag,
         teams: `${home} vs ${away}`,
-        detail: `Maç boyunca kanat oyunları ve ceza sahası içi aksiyon bekleniyor.`,
+        detail: `Kanat oyunları ve ceza sahası içi aksiyon sayısının yüksek olması bekleniyor.`,
         highlight: "9.5 Korner Üst",
       });
     }
@@ -165,13 +161,12 @@ app.get("/api/stats", async (req, res) => {
       return res.json({
         date: footballData.date,
         sport: "futbol",
-        stats, // kategori bazlı obje
+        stats,
       });
     }
 
     if (sport === "basketbol") {
       const data = await getBasketballStatsForDay(dayOffset);
-      // basketballEngine zaten { date, sport, stats } formatında
       return res.json({
         date: data.date,
         sport: data.sport,
@@ -181,7 +176,6 @@ app.get("/api/stats", async (req, res) => {
 
     if (sport === "tenis") {
       const data = await getTennisStatsForDay(dayOffset);
-      // tennisEngine de { date, sport, stats } formatında
       return res.json({
         date: data.date,
         sport: data.sport,
@@ -189,7 +183,6 @@ app.get("/api/stats", async (req, res) => {
       });
     }
 
-    // Buraya normalde düşmez ama yine de:
     return res.status(400).json({ error: "Desteklenmeyen spor türü" });
   } catch (err) {
     console.error("❌ /api/stats hata:", err.message || err);
